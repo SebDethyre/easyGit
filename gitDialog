@@ -1,0 +1,2115 @@
+#!/bin/bash
+
+#set -e
+
+CURRENT_DIR=`pwd`
+factor=3
+totalLineNumber=60
+filesDisplay=1
+
+filesDialogWidth=`sed '2q;d' ~/bin/easyGit/config/generalConfig`
+
+textColorLogTerm=`sed '4q;d' ~/bin/easyGit/config/generalConfig`
+backGroundColorLogTerm=`sed '6q;d' ~/bin/easyGit/config/generalConfig`
+textSizeLogTerm=`sed '8q;d' ~/bin/easyGit/config/generalConfig`
+
+one=1
+two=2
+three=3
+four=4
+five=5
+six=6
+seven=7
+nine=9
+ten=10
+eleven=11
+twelve=12
+thirteen=13
+fourteen=14
+fifteen=15
+sixteen=16
+seventeen=17
+eighteen=18
+twenty=20
+thirty=30
+forty=40
+
+GA="Add"
+GAS="Add One"
+GC="Commit"
+GP="Push"
+GRT="Reset"
+GCR="Commit Reset"
+
+GF="Fetch"
+GS="Stash"
+GPL="Pull"
+GR="Rebase"
+GSP="Stash Pop"
+GM="Merge"
+OR="Ouvrir"
+GCL="Clone"
+
+GLCP="Log Pick"
+CP="Cherry-Pick"
+FX="Fix PAL"
+GST="Status"
+GL="Log"
+GLL="Reflog"
+GK="Checkout"
+GB="Branch"
+GAA="Add All"
+GRA="Reset All"
+GRM="Remove"
+GE="Erase"
+OF="Editer"
+
+MD="Dépot"
+MF="Fichiers"
+MO="Outils"
+SC="Clear"
+RL="Résultats par ligne"
+AFF="Affichage"
+CW="Largeur"
+TC="Terminal"
+
+################# GENERAL FUNCTIONS ####################
+
+notification(){
+	zenity --notification\
+    --window-icon="info" \
+    --text="$1"
+}
+
+switch_display(){
+	if [ $filesDisplay -eq 1 ]; then
+		filesDisplay=0
+	else
+		filesDisplay=1
+	fi
+}
+
+clear_screen(){	
+	clear 
+}
+clear_screen param1 param2
+change_width(){
+	width=`zenity --scale --title="Largeur  📏" --text="		        Largeur en pixels" --value=$filesDialogWidth --min-value=450 --max-value=1850 --step 50`
+	case $? in
+			0)
+				filesDialogWidth=$width
+				add_spaces
+				sed -i '2s/.*/'$width'/' ~/bin/easyGit/config/generalConfig
+				echo "Vous avez choisi $width pixels."
+				function_files ;;
+			1)
+				echo "Aucune valeur sélectionnée.";;
+			-1)
+				echo "Une erreur inattendue est survenue.";;
+	esac
+	2>/dev/null
+}
+
+edit_text(){
+	if ret=`zenity --file-selection --title="Editer texte  📝" --filename=$CURRENT_DIR/ --text="Fichier"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Pas de fichier choisi"
+			edit_file
+		fi
+	else
+		echo "Annulation"
+		edit_file
+	fi
+	if ([ -n "$titre" ]); then
+		if ret2=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Ouvrir avec   📝" --width=250 --height=275 --text="" --column="" "			   Local" "		 	 VScode" "" "		 	  Pluma" "		 	   Nano" "		 	    Vim"`; then
+			titre2=$ret2
+			if [ "$titre2" = "" ]; then
+				echo "Aucun choix effectué"
+				edit_text
+			fi
+		else
+			echo "Annulation"
+			edit_text
+		fi
+		if ([ -n "$titre2" ]); then
+			if [ "$titre2" = "			   Local" ]; then
+				notification "Ouverture de $titre"
+				cat $titre &> ~/bin/easyGit/gitTemp
+				FILE=`dirname $0`/gitTemp
+				ret=`zenity --text-info \
+				--title="Edit" \
+				--width=1850 \
+				--height=1050 \
+				--editable \
+				--filename=$FILE`
+				case $? in
+					0)
+						echo "$ret" > $titre 
+						notification "Enregistrement de $titre"
+						unset titre
+						;;
+					1)
+						echo "Modifications annulées"	;;
+					-1)
+						echo "Une erreur est survenue." ;;
+				esac
+				unset titre2
+			elif [ "$titre2" = "		 	 VScode" ]; then
+				unset titre2
+				notification "Ouverture de $titre"
+				code $titre 
+				unset titre
+			elif [ "$titre2" = "		 	  Pluma" ]; then
+				unset titre2
+				notification "Ouverture de $titre"
+				pluma $titre
+				unset titre
+			elif [ "$titre2" = "		 	   Nano" ]; then
+				unset titre2
+				notification "Ouverture de $titre"
+				nano $titre
+				unset titre
+			elif [ "$titre2" = "		 	    Vim" ]; then
+				unset titre2
+				notification "Ouverture de $titre"
+				vi $titre
+				unset titre
+			fi
+			edit_text
+		else
+			echo "Aucun choix effectué"
+			function_repo
+		fi
+		2>/dev/null
+	else
+		echo "Pas de fichier ouvert"
+		edit_text
+	fi
+}
+
+edit_image(){
+	if ret=`zenity --file-selection --title="Ouvrir image  📚" --filename=$CURRENT_DIR/ --text="Fichier"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Pas de fichier choisi"
+			edit_file
+		fi
+	else
+		echo "Annulation"
+		edit_file
+	fi
+	if ([ -n "$titre" ]); then
+		(echo "<h1></h1><img src=\"data:"
+		mimetype -b "$titre"
+		echo -n ";base64,"
+		base64 "$titre"
+		echo "\">") | zenity --text-info --width=1900 --height=1050 --html --filename=/dev/stdin
+		notification "Ouverture de $titre"
+		unset titre
+		edit_image
+	else
+		echo "Pas de fichier ouvert"
+		edit_file
+	fi
+}
+
+edit_file(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Editer  📖" --width=250 --height=205 --text="" --column="" "			   Texte			 📝" "" "		 	  Image			 🖼"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Aucun choix effectué"
+		fi
+	else
+		echo "Annulation"
+		function_files
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "			   Texte			 📝" ]; then
+			unset titre
+			edit_text
+		elif [ "$titre" = "		 	  Image			 🖼" ]; then
+			unset titre
+			edit_image
+		fi
+	else
+		echo "Aucun clone effectué"
+		function_files
+	fi
+	2>/dev/null
+
+}
+
+checkFilesChanged(){
+	if([ -d .git ] ); then
+		git diff --name-only > ~/bin/easyGit/files/filesChanged
+		git ls-files --other --exclude-standard > ~/bin/easyGit/files/filesUntracked
+		git diff --name-only > ~/bin/easyGit/files/filesChangedAndUntracked
+		git ls-files --other --exclude-standard >> ~/bin/easyGit/files/filesChangedAndUntracked
+		git diff --name-only --cached > ~/bin/easyGit/files/filesStaged
+		HASH_COMMIT=`git rev-parse HEAD`
+		git diff-tree --no-commit-id --name-only -r $HASH_COMMIT > ~/bin/easyGit/files/filesCommitted
+		TEXT_COMMIT_RAW=`git log --format=%B -n 1`
+		TEXT_COMMIT=`echo "$TEXT_COMMIT_RAW" | fold -b$(($totalLineNumber - 2)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+		LAST_COMMIT_DATE_RAW=`git log -1 --format=%cd`
+		LAST_COMMIT_DATE=${LAST_COMMIT_DATE_RAW::-6}
+		REPO_ADRESS=`git config --get remote.origin.url`
+	else
+		echo "" > ~/bin/easyGit/files/filesChanged
+		echo "" > ~/bin/easyGit/files/filesUntracked
+		echo "" > ~/bin/easyGit/files/filesChangedAndUntracked
+		echo "" >> ~/bin/easyGit/files/filesChangedAndUntracked
+		echo "" > ~/bin/easyGit/files/filesStaged
+		HASH_COMMIT=""
+		echo "" > ~/bin/easyGit/files/filesCommitted
+		TEXT_COMMIT_RAW=""
+		TEXT_COMMIT=""
+		LAST_COMMIT_DATE_RAW=""
+		LAST_COMMIT_DATE=""
+		REPO_ADRESS=""
+	fi
+}
+
+open_repo(){
+	if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Ouvrir 📂" --width=650 --height=205 --text="" --column="" "🌍		Distant : 		$REPO_ADRESS" "" "📂		Local      : 		$CURRENT_DIR"`; then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+		fi
+	else
+		function_repo
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "🌍		Distant : 		$REPO_ADRESS" ]; then
+				xdg-open $REPO_ADRESS
+		elif [ "$titre" = "📂		Local      : 		$CURRENT_DIR" ]; then
+				xdg-open $CURRENT_DIR
+		fi
+	else
+		echo "Pas de choix effectué"
+	fi
+	2>/dev/null
+}
+
+#############################################################################################################################################################################
+if([ -d .git ] ); then
+	git for-each-ref --format='%(refname:short)' refs/heads/ > ~/bin/easyGit/config/branchesList
+	git log --pretty=format:"%H			%s" > ~/bin/easyGit/config/ashesTexts
+	cat .git/HEAD | cut -c 17- > ~/bin/easyGit/config/currentBranch
+	currentBranch=`cat .git/HEAD | cut -c 17-`
+	REPO_ADRESS=`git config --get remote.origin.url`
+	echo $REPO_ADRESS | xclip
+else
+	echo "Le répertoire courant n'est pas un dépot Git."
+	echo "" > ~/bin/easyGit/config/branchesList
+	echo "" > ~/bin/easyGit/config/ashesTexts
+	echo "" > ~/bin/easyGit/config/currentBranch
+	LAST_COMMIT_DATE_RAW=""
+	currentBranch=""
+fi
+#############################################################################################################################################################################
+
+LOGO_400="
+\t\t<span color=\"#A10101\">      ███████╗  ██╗████████╗</span>
+\t\t<span color=\"#AE0404\">     ██╔ ════╝  ██║╚  ═██╔   ═╝</span>
+\t\t<span color=\"#C60606\">     ██║  ████╗ ██║       ██║   </span>
+\t\t<span color=\"#D11E1E\">     ██║      ██ ║ ██║       ██║   </span>
+\t\t<span color=\"#F54B4B\">      ██████ ╔╝ ██║       ██║   </span>
+\t\t<span color=\"#F65151\">       ╚═════╝    ╚  ╝       ╚═╝   </span>
+
+\t<span color=\"darkblue\">$REPO_ADRESS</span>
+\t<big>📁</big>   <span color=\"blue\">$CURRENT_DIR</span>
+"
+
+add_spaces(){
+	totalLineNumberFloat=`echo $filesDialogWidth / 8 | bc -l`
+	totalLineNumber=${totalLineNumberFloat%.*}
+	TOTAL_LINE=`printf %$totalLineNumber\s |tr " " "_"`
+	simpleLineNumber=$(($totalLineNumber - $eleven))
+	SIMPLE_LINE=`printf %$simpleLineNumber\s |tr " " "_"`
+	REPO_ADRESS=`git config --get remote.origin.url | fold -b$(($totalLineNumber - $one)) | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+
+	spaceRawLineSize="$(($totalLineNumber - $simpleLineNumber))"
+	spaceLineSize="$(($spaceRawLineSize - 3))"
+	SPACE_LINE=`printf %$spaceLineSize\s |tr " " " "`
+
+	git1="<span color=\"#A10101\"> ███████╗  ██╗████████╗    </span>"
+	git2="<span color=\"#AE0404\">██╔ ════╝  ██║╚  ═██╔   ═╝ </span>"
+	git3="<span color=\"#C60606\">██║  ████╗ ██║       ██║   </span>"
+	git4="<span color=\"#D11E1E\">██║      ██ ║ ██║       ██║</span>"
+	git5="<span color=\"#F54B4B\"> ██████ ╔╝ ██║       ██║   </span>"
+	git6="<span color=\"#F65151\">  ╚═════╝    ╚  ╝       ╚═╝</span>"
+
+	decorum=31
+	trueGitLength="$(( ${#git1} - $decorum ))"
+	spaceGitSize="$(($totalLineNumber - $trueGitLength - 3 ))"
+	SPACE_GIT=`printf %$spaceGitSize\s |tr " " " "`
+	GIT="$SPACE_GIT$git1
+$SPACE_GIT$git2
+$SPACE_GIT$git3
+$SPACE_GIT$git4
+$SPACE_GIT$git5
+$SPACE_GIT$git6
+
+<span color=\"darkblue\">$REPO_ADRESS</span>
+\t<big>📁</big>   <span color=\"blue\">$CURRENT_DIR</span>
+"
+	diff=46
+	commandsDialogWidth="$(($totalLineNumber - $diff))"
+	commandsLineNumberFloat=`echo $commandsDialogWidth / $factor | bc -l`
+	commandsLineNumber=${commandsLineNumberFloat%.*}
+	commandsLineNumber=$(($commandsLineNumber - 4))
+
+	spaceAddSize="$(($totalLineNumber + $commandsLineNumber))"
+	spaceAddSSize="$(($spaceAddSize - 5))"
+	spacePushSize="$(($spaceAddSize - $one))"
+	spaceResetSize="$(($spaceAddSize - $one))"
+	spaceAddAllSize="$(($spaceAddSize - 4))"
+	spaceResetAllSize="$(($spaceAddSize - 5))"
+	spaceCommitResetSize="$(($spaceAddSize - $twelve))"
+	spaceStatusSize="$(($spaceAddSize - 3))"
+	spaceRemove="$(($spaceAddSize - 4))"
+	spaceDisplay="$(($spaceAddSize - 6))"
+	spaceChangeWidthSize="$(($spaceAddSize - 4))"
+	spaceCommitPendingSize="$(($totalLineNumber - $seventeen))"
+	spaceCommitPendingSymbol="$(($totalLineNumber - $eighteen))"
+	spaceOpenFile="$(($spaceAddSize - 2))"
+	spaceFilesSymbols="$(($spaceAddSize - $twelve))"
+
+	SPACE_ADD=`printf %$spaceAddSize\s |tr " " " "`
+	SPACE_ADD_S=`printf %$spaceAddSSize\s |tr " " " "`
+	SPACE_COMMIT=`printf %$spaceAddSSize\s |tr " " " "`
+	SPACE_PUSH=`printf %$spacePushSize\s |tr " " " "`
+	SPACE_RESET=`printf %$spaceResetSize\s |tr " " " "`
+	SPACE_ADD_ALL=`printf %$spaceAddAllSize\s |tr " " " "`
+	SPACE_RESET_ALL=`printf %$spaceResetAllSize\s |tr " " " "`
+	SPACE_COMMIT_RESET=`printf %$spaceCommitResetSize\s |tr " " " "`
+	SPACE_STATUS=`printf %$spaceStatusSize\s |tr " " " "`
+	SPACE_REMOVE=`printf %$spaceRemove\s |tr " " " "`
+	SPACE_OPEN_FILE=`printf %$spaceOpenFile\s |tr " " " "`
+	SPACE_DISPLAY=`printf %$spaceDisplay\s |tr " " " "`
+	SPACE_CHANGE_WIDTH=`printf %$spaceChangeWidthSize\s |tr " " " "`
+	SPACE_COMMIT_PENDING=`printf %$spaceCommitPendingSize\s |tr " " " "`
+	SPACE_COMMIT_PENDING_SYMBOL=`printf %$spaceCommitPendingSymbol\s |tr " " " "`
+	SPACE_FILES_SYMBOL=`printf %$spaceFilesSymbols\s |tr " " " "`
+}
+
+add_spaces
+
+header_repo(){
+	checkFilesChanged
+	currentBranch=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch`
+	nbFilesChangedSymbol="<big>🔧</big>"
+	nbFilesChanged=`wc -l < ~/bin/easyGit/files/filesChanged`
+	nbFilesUntrackedSymbol="<big>🧩</big>"
+	nbFilesUntracked=`wc -l < ~/bin/easyGit/files/filesUntracked`
+	if [ $nbFilesChanged -eq 0 ]; then
+		nbFilesChangedSymbol=""
+		nbFilesChanged=""
+	fi
+	if [ $nbFilesUntracked -eq 0 ]; then
+		nbFilesUntrackedSymbol=""
+		nbFilesUntracked=""
+	fi
+	HEADER="$LOGO_400
+\t<big>⎇</big>\t<span color=\"grey\">Branche :</span><span color=\"orange\"><b><i> [$currentBranch]</i></b></span>
+
+\t<span color=\"green\">$nbFilesChangedSymbol  $nbFilesChanged</span>    <span color=\"#155162\">$nbFilesUntrackedSymbol  $nbFilesUntracked</span>
+$TMP_SCREEN
+"
+}
+
+header_general(){
+	checkFilesChanged
+	currentBranch=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch`
+	nbFilesChangedSymbol="<big>🔧</big>"
+	nbFilesChanged=`wc -l < ~/bin/easyGit/files/filesChanged`
+	nbFilesUntrackedSymbol="<big>🧩</big>"
+	nbFilesUntracked=`wc -l < ~/bin/easyGit/files/filesUntracked`
+	if [ $nbFilesChanged -eq 0 ]; then
+		nbFilesChangedSymbol=""
+		nbFilesChanged=""
+	fi
+	if [ $nbFilesUntracked -eq 0 ]; then
+		nbFilesUntrackedSymbol=""
+		nbFilesUntracked=""
+	fi
+	HEADER="$LOGO_400
+\t<big>⎇</big>\t<span color=\"grey\">Branche :</span><span color=\"orange\"><b><i> [$currentBranch]</i></b></span>
+
+\t<span color=\"green\">$nbFilesChangedSymbol  $nbFilesChanged</span>    <span color=\"#155162\">$nbFilesUntrackedSymbol  $nbFilesUntracked</span>
+"
+}
+
+header_utils(){
+	checkFilesChanged
+	currentBranch=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch`
+	nbFilesChangedSymbol="<big>🔧</big>"
+	nbFilesChanged=`wc -l < ~/bin/easyGit/files/filesChanged`
+	nbFilesUntrackedSymbol="<big>🧩</big>"
+	nbFilesUntracked=`wc -l < ~/bin/easyGit/files/filesUntracked`
+	if [ $nbFilesChanged -eq 0 ]; then
+		nbFilesChangedSymbol=""
+		nbFilesChanged=""
+	fi
+	if [ $nbFilesUntracked -eq 0 ]; then
+		nbFilesUntrackedSymbol=""
+		nbFilesUntracked=""
+	fi
+	HEADER="$LOGO_400
+\t<big>⎇</big>\t<span color=\"grey\">Branche :</span><span color=\"orange\"><b><i> [$currentBranch]</i></b></span>
+
+\t<span color=\"green\">$nbFilesChangedSymbol  $nbFilesChanged</span>    <span color=\"#155162\">$nbFilesUntrackedSymbol  $nbFilesUntracked</span>
+"
+}
+
+_quit(){
+    exit 0
+}
+
+############### GIT FUNCTIONS ####################
+fix_process_already_launched(){
+	zenity --question \
+		--title "Fixation de l'erreur : process already launched applied  ⛑" \
+		--width=470 \
+		--height=40 \
+		--text "La fixation de l'erreur <b>process already launched applied</b> entraîne l'effacement du fichier <i>.git/index.lock</i>. 
+\nUne copie pour révision <i>index.lock.back</i> sera conservée dans le répertoire courant.
+\nSouhaitez- vous continuer ?"
+	if [ $? = 0 ]; then
+		cp .git/index.lock index.lock.back
+		rm -f .git/index.lock
+		echo "Fixation de l'erreur : 'process already launched applied' effectuée"
+		notification "Fixation de l'erreur effectué"
+	else
+		echo "Fixation de l'erreur : 'process already launched applied' annulée"
+		notification "Fixation de l'erreur annulée"
+	fi	
+}
+
+git_clone_this(){
+	if ret=`zenity  --file-selection --title="Clone  📚" --text="Répertoire de réception" --directory`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Pas de répertoire choisi"
+			git_clone
+		fi
+	else
+		echo "Annulation"
+		git_clone
+	fi
+	if ([ -n "$titre" ]); then
+		git clone $REPO_ADRESS $titre &> ~/bin/easyGit/gitTemp
+		TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+		lineNumber=52
+		TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+		echo "Git clone de $REPO_ADRESS dans $titre"
+		notification "Git clone de $REPO_ADRESS dans $titre"
+	else
+		echo "Pas de clone effectué"	
+	fi
+}
+
+git_clone_any(){
+	if ret=`zenity --entry --title="Clone  📚" --text='Dépot à cloner'`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Il faut un dépot pour cloner"
+			git_clone
+		fi
+	else
+		echo "Annulation"
+		git_clone
+	fi
+	if ([ -n "$titre" ])
+		then
+			if ret=`zenity  --file-selection --title="Clone  📚" --text="Répertoire de réception" --directory`; then
+				titre2=$ret
+				if [ "$titre2" = "" ]; then
+					echo "Pas de répertoire choisi"
+					git_clone_any
+				fi
+			else
+				echo "Annulation"
+				git_clone_any
+			fi
+			if ([ -n "$titre2" ]); then
+				git clone $titre $titre2 &> ~/bin/easyGit/gitTemp
+				TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+				lineNumber=52
+				TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+				echo "Git clone de $titre dans $titre2"
+				notification "Git clone de $titre dans $titre2"
+				unset titre
+			else
+				echo "Pas de clone effectué"
+				git_clone_any
+			fi
+		else
+			echo "Pas de clone effectué"
+			git_clone
+	fi
+}
+
+git_clone(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Clone   📚" --width=650 --height=205 --text="" --column="" "📚		Cloner	$REPO_ADRESS ?" "" "📚		Cloner	un autre dépot ?"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Aucun choix effectué"
+		fi
+	else
+		echo "Annulation"
+		function_repo
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "📚		Cloner	$REPO_ADRESS ?" ]; then
+			unset titre
+			git_clone_this
+		elif [ "$titre" = "📚		Cloner	un autre dépot ?" ]; then
+			unset titre
+			git_clone_any
+		fi
+	else
+		echo "Aucun clone effectué"
+		function_repo
+	fi
+	2>/dev/null
+}
+
+git_fetch(){
+	REPO_ADRESS=`git config --get remote.origin.url`
+	git fetch
+	echo "Git Fetch du dépot $REPO_ADRESS"
+	notification "Git Fetch du dépot $REPO_ADRESS"
+}
+
+git_stash_do(){
+	git stash &> ~/bin/easyGit/gitTemp
+	TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+	lineNumber=52
+	TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+	echo "Stockage des modifications locales"
+	notification "Stockage des modifications locales"
+}
+
+git_stash_pop(){
+	git stash pop &> ~/bin/easyGit/gitTemp
+	FILE=`dirname $0`/gitTemp
+	zenity --text-info \
+		--title="Stash Pop" \
+		--width=650 \
+		--height=700 \
+		--filename=$FILE
+	case $? in
+		0)
+			echo "Récupération des modifications locales"
+			notification "Récupération des modifications locales"
+			;;
+		1)
+			echo "Git Stash Pop quitté"	;;
+		-1)
+			echo "Une erreur est survenue." ;;
+	esac
+}
+
+git_stash(){
+if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Stash 🔁" --width=250 --height=205 --text="" --column="" "			Stash			 🔁" "" "		     Stash Pop		 🔂"`; then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+		fi
+	else
+		function_repo
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "			Stash			 🔁" ]; then
+			git_stash_do
+		elif [ "$titre" = "		     Stash Pop		 🔂" ]; then
+			git_stash_pop
+		fi
+	else
+		echo "Pas de choix effectué"
+	fi
+	2>/dev/null
+}
+
+git_status(){
+    git status > ~/bin/easyGit/gitTemp
+	FILE=`dirname $0`/gitTemp
+	zenity --text-info \
+		--title="Status" \
+		--width=650 \
+		--height=700 \
+		--filename=$FILE
+	case $? in
+		0)
+			echo "Git Status" ;;
+		1)
+			echo "Git Status quitté" ;;
+		-1)
+			echo "Une erreur est survenue." ;;
+	esac
+}
+
+git_cherry_pick_skip(){
+	git cherry-pick --skip &> ~/bin/easyGit/gitTemp
+	TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+	lineNumber=52
+	TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+	echo "Cherry-Pick Confirmé"
+	notification "Cherry-Pick Confirmé"
+}
+
+git_cherry_pick_abort(){
+	git cherry-pick --abort &> ~/bin/easyGit/gitTemp
+	TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+	lineNumber=52
+	TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+	echo "Cherry-Pick annulé"
+	notification "Cherry-Pick annulé"
+}
+
+git_cherry_pick_operation(){
+	currentBranch=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch`
+	readarray -t textHashArray < ~/bin/easyGit/config/ashesTexts
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Cherry Pick  🍒" --width=1150 --height=900 --text="Cherry pick depuis $currentBranch" --column="Hashs												   Textes" "${textHashArray[@]}"`; then
+			file=`echo $file | head -c 40`
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de Cherry-Pick effectué"
+				git_cherry_pick_operation 
+			fi
+		else
+			echo "Annulation"
+	   	fi
+		if ([ -n "$titre" ]); then
+		echo $titre
+			git cherry-pick $titre &> ~/bin/easyGit/gitTemp
+			FILE=`dirname $0`/gitTemp
+			zenity --text-info \
+				--title="Cherry-Pick" \
+				--width=650 \
+				--height=550 \
+				--filename=$FILE
+			case $? in
+				0)
+					echo "Cherry-Pick sur la branche $currentBranch du commit : $titre"
+					checkFilesChanged
+					notification "Cherry-Pick sur la branche $currentBranch du commit :
+\t$titre"
+					unset titre
+					;;
+				1)
+					echo "Git Cherry-Pick quitté" ;;
+				-1)
+					echo "Une erreur est survenue." ;;
+			esac
+		else
+			echo "Pas de Cherry-Pick effectué"
+			git_cherry_pick
+		fi
+		2>/dev/null
+	fi
+}
+
+git_cherry_pick(){
+	if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Cherry Pick  🍒" --width=190 --height=230 --text="" --column="" "	         Picking	         🍒" "" "	      Confirmer       ✅" "	         Annuler         ❎"`
+		then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de choix effectué"
+			fi
+		else
+			function_utils
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			if [ "$titre" = "	         Picking	         🍒" ]; then
+				unset titre
+				git_cherry_pick_operation
+			elif [ "$titre" = "	      Confirmer       ✅" ]; then
+				unset titre
+				git_cherry_pick_skip
+			elif [ "$titre" = "	         Annuler         ❎" ]; then
+				unset titre
+				git_cherry_pick_abort
+			fi
+		else
+			echo "Pas de choix effectué"
+	fi
+}
+
+git_log_simple(){
+	git log --graph --summary > ~/bin/easyGit/gitTemp
+	FILE=`dirname $0`/gitTemp
+	zenity --text-info \
+		--title="Log" \
+		--width=950 \
+		--height=1050 \
+		--filename=$FILE
+	case $? in
+		0)
+			git_log
+			echo "Git Log" ;;
+		1)
+			git_log
+			echo "Git Log quitté" ;;
+		-1)
+			echo "Une erreur est survenue." ;;
+	esac
+}
+
+rgb2hex(){
+	if [ $# -eq 0 ]; then
+		echo 'Invalid color value!';
+
+	fi
+	if [[ $1 =~ ([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2}) ]]; then
+		result=`printf "(%d, %d, %d)\n" \
+			0x"${BASH_REMATCH[1]}" 0x"${BASH_REMATCH[2]}" 0x"${BASH_REMATCH[3]}"`
+	elif [[ $1 =~ ([[:digit:]]{1,3}),([[:digit:]]{1,3}),([[:digit:]]{1,3}) ]]; then
+		result=`printf "#%02x%02x%02x\n" \
+			"${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}"`
+	fi
+}
+
+terminal_police_size_text(){
+	textSizeLogTerm=`sed '8q;d' ~/bin/easyGit/config/generalConfig`
+	size=`zenity --scale --title="Taille du texte  📏" --text="		        Hauteur en pixels" --value=$textSizeLogTerm --min-value=5 --max-value=30 --step 1`
+	case $? in
+			0)
+				echo "Vous avez choisi $size pixels."
+				sed -i '8s/.*/'$size'/' ~/bin/easyGit/config/generalConfig
+				sed -i '2s/.*/xterm*faceSize: '$size'/' ~/.Xresources
+				xrdb -merge ~/.Xresources
+				;;
+			1)
+				echo "Aucune valeur sélectionnée.";;
+			-1)
+				echo "Une erreur inattendue est survenue.";;
+	esac
+	2>/dev/null
+	config_terminal
+}
+
+
+terminal_color_text(){
+	color=`zenity --color-selection --show-palette`
+	case $? in
+			0)
+				echo "You selected $color.";;
+			1)
+				echo "Aucune couleur choisie.";;
+			-1)
+				echo "Une erreur est survenue.";;
+	esac
+	colorRGBRaw=`echo "$color" | head -c-2`
+	colorRGBRaw=${colorRGBRaw:4}
+	rgb2hex $colorRGBRaw
+	textColorLogTerm=$result
+	sed -i '4s/.*/'$textColorLogTerm'/' ~/bin/easyGit/config/generalConfig
+	sed -i '3s/.*/XTerm*foreground: '$textColorLogTerm'/' ~/.Xresources
+	xrdb -merge ~/.Xresources
+	config_terminal
+}
+
+terminal_color_background(){
+	color=`zenity --color-selection --show-palette`
+	case $? in
+			0)
+				echo "You selected $color.";;
+			1)
+				echo "Aucune couleur choisie.";;
+			-1)
+				echo "Une erreur est survenue.";;
+	esac
+	colorRGBRaw=`echo "$color" | head -c-2`
+	colorRGBRaw=${colorRGBRaw:4}
+	rgb2hex $colorRGBRaw
+	backGroundColorLogTerm=$result
+	sed -i '6s/.*/'$backGroundColorLogTerm'/' ~/bin/easyGit/config/generalConfig
+	sed -i '4s/.*/XTerm*background: '$backGroundColorLogTerm'/' ~/.Xresources
+	xrdb -merge ~/.Xresources
+	config_terminal
+}
+
+config_terminal(){
+	if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Config Terminal 🛠" --width=250 --height=225 --text="" --column="" "		   Couleur texte		  📄" "		     Taille texte		  📄" "" "	       	   Fond d'écran		  📺"`
+	 then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+			terminal
+		fi
+	else
+		terminal
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "		   Couleur texte		  📄" ]; then
+			terminal_color_text
+			unset titre
+		elif [ "$titre" = "		     Taille texte		  📄" ]; then
+			terminal_police_size_text
+		elif [ "$titre" = "	       	   Fond d'écran		  📺" ]; then
+			terminal_color_background
+			unset titre
+		fi
+	else
+		echo "Pas de choix effectué"
+		terminal
+	fi
+}
+
+intern_terminal(){ 
+	xterm 
+	terminal
+}
+
+terminal(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Terminal  💻" --width=250 --height=205 --text="" --column="" "		        Terminal		 💻" "" "	       	           Config			 🛠"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Aucun choix effectué"
+		fi
+	else
+		echo "Annulation"
+		function_utils
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "		        Terminal		 💻" ]; then
+			unset titre
+			intern_terminal
+		elif [ "$titre" = "	       	           Config			 🛠" ]; then
+			config_terminal
+			unset titre	
+		fi
+	else
+		echo "Aucun clone effectué"
+		function_utils
+	fi
+	2>/dev/null
+
+}
+
+git_log_terminal(){
+	git config --global alias.tree "log --oneline --decorate --all --graph"
+	git tree > ~/bin/easyGit/gitTemp
+	nbLineTemp=`wc -l < ~/bin/easyGit/gitTemp`
+	if (( $nbLineTemp > $forty )); then
+		sed -i '5s/.*/XTerm*geometry: 150x40/' ~/.Xresources
+		xrdb -merge ~/.Xresources	
+	else		
+		sed -i '5s/.*/XTerm*geometry: 170x'$nbLineTemp'/' ~/.Xresources
+		xrdb -merge ~/.Xresources
+	fi
+	xterm -e git tree
+	git_log
+}
+
+git_log(){
+	if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Log 📓" --width=250 --height=255 --text="" --column="" "		         Détaillé		 📄" "	       	        Couleurs		 📊" "" "			 Reflog 			 📒" "			 Branch			 🌵"`
+	 then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+		fi
+	else
+		function_utils
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "		         Détaillé		 📄" ]; then
+			git_log_simple
+			unset titre
+		elif [ "$titre" = "	       	        Couleurs		 📊" ]; then
+			git_log_terminal
+			unset titre
+		elif [ "$titre" = "			 Reflog 			 📒" ]; then
+			git_reflog
+			unset titre
+		elif [ "$titre" = "			 Branch			 🌵" ]; then
+			git_branch
+			unset titre
+		fi
+	else
+		echo "Pas de choix effectué"
+	fi
+}
+
+git_reflog(){
+	git reflog --summary > ~/bin/easyGit/gitTemp
+	FILE=`dirname $0`/gitTemp
+	zenity --text-info \
+		--title="Reflog" \
+		--width=950 \
+		--height=1050 \
+		--filename=$FILE
+	case $? in
+		0)
+			git_log
+			echo "Git Reflog" ;;
+		1)
+			git_log
+			echo "Git Reflog quitté" ;;
+		-1)
+			echo "Une erreur est survenue." ;;
+	esac
+}
+
+git_branch(){
+	git branch > ~/bin/easyGit/gitTemp
+	FILE=`dirname $0`/gitTemp
+	zenity --text-info \
+       --title="Branch" \
+	   --width=400 \
+	   --height=350 \
+       --filename=$FILE
+	case $? in
+		0)	git_log
+			echo "Git Branch" ;;
+		1)
+			git_log
+			echo "Git Branch quitté" ;;
+		-1)
+			echo "Une erreur est survenue." ;;
+	esac
+}
+
+git_checkout(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Checkout  ⎇" --text="Git checkout ..." --column="Branches disponibles" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/branchesList)`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Il faut une branche"
+		fi
+	else
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		git checkout $titre || notification "Modifications non remisées :
+Vous restez sur la branche <b>$currentBranch</b>" && return 0
+		currentBranch=`cat .git/HEAD | cut -c 17-`
+		cat .git/HEAD | cut -c 17- > ~/bin/easyGit/config/currentBranch
+		unset titre
+		echo "Basculement sur la branche :
+$currentBranch"
+		notification "Basculement sur la branche :
+\t<b>$currentBranch</b>"
+	else
+		echo "Pas de branche choisie"
+	fi
+	2>/dev/null
+}
+
+git_add_all(){
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à ajouter"
+		notification "Aucun fichier à ajouter"
+	else
+		git add -A
+		checkFilesChanged
+		echo "Fichiers ajoutés au commit :
+$(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged)"
+	fi
+}
+
+git_add_some(){
+	checkFilesChanged
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à ajouter"
+		notification "Aucun fichier à ajouter"
+        else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Add  ＋" --text="Git add ..." --column="Fichiers modifiés" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier ajouté"
+			fi
+		else
+			echo "Annulation"
+	   	fi
+		if ([ -n "$titre" ]); then
+			git add $titre
+			echo "Fichier" $titre "ajouté"
+			checkFilesChanged
+			unset titre
+			git_add_some
+		else
+			echo "Pas de fichier ajouté"
+			git_add
+		fi
+	2>/dev/null
+	fi
+}
+
+git_add_single(){
+	checkFilesChanged
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à ajouter"
+		notification "Aucun fichier à ajouter"
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Add  ＋" --text="Git add ..." --column="Fichiers modifiés" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`;	then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier ajouté"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git add $titre
+			echo "Fichier" $titre "ajouté"
+			checkFilesChanged
+			unset titre
+		else
+			echo "Pas de fichier ajouté"
+			git_add
+		fi
+		2>/dev/null
+	fi
+}
+
+git_add(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Add   ＋" --width=250 --height=225 --text="" --column="" "			Add			 *" "			Add			⁂" "" "			Add			 ∞"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Aucun choix effectué"
+		fi
+	else
+		echo "Annulation"
+		function_files
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "			Add			 *" ]; then
+			unset titre
+			git_add_single
+		elif [ "$titre" = "			Add			⁂" ]; then
+			unset titre
+			git_add_some
+		elif [ "$titre" = "			Add			 ∞" ]; then
+			unset titre
+			git_add_all
+		fi
+	else
+		echo "Aucun clone effectué"
+		function_files
+	fi
+	2>/dev/null
+}
+
+git_reset_all(){
+	filesStaged=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged`
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	elif [ "$filesStaged" = "" ]; then
+		echo "Aucun fichier à retirer"
+		notification "Aucun fichier à retirer"
+	else
+	git reset HEAD
+		checkFilesChanged
+		echo "Fichiers non suivis :
+$(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)"
+		notification "Fichiers non suivis :
+$(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)"
+	fi
+}
+
+git_reset_some(){
+	filesStaged=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+		git_reset
+	elif [ "$filesStaged" = "" ]; then
+		echo "Aucun fichier à retirer"
+		notification "Aucun fichier à retirer"
+		git_reset
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Reset  −" --text="Git reset ..." --column="Fichiers ajoutés" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier supprimé"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git reset $titre && echo "fichier" $titre "supprimé"
+			checkFilesChanged
+			notification "Fichier retiré :
+\t$titre"
+			unset titre
+			git_reset_some
+		else
+			echo "Pas de fichier supprimé"
+			git_reset
+		fi
+		2>/dev/null
+	fi
+}
+
+git_reset_one(){
+	filesStaged=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+	elif [ "$filesStaged" = "" ]; then
+		echo "Aucun fichier à retirer"
+		notification "Aucun fichier à retirer"
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Reset  −" --text="Git reset ..." --column="Fichiers ajoutés" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier supprimé"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git reset $titre && echo "fichier" $titre "supprimé"
+			checkFilesChanged
+			notification "Fichier retiré :
+\t$titre"
+			unset titre
+			
+		else
+			echo "Pas de fichier supprimé"
+			git_reset
+		fi
+		2>/dev/null
+	fi
+}
+
+git_reset_hard(){
+
+if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		
+		echo "Commit en cours - Hard Reset annulé"
+		notification "Commit en cours - Hard Reset annulé"
+	else
+		zenity --question \
+			--title "Hard Reset  ❎" \
+			--width=470 \
+			--height=40 \
+			--text "Hard Reset, souhaitez-vous vraiment continuer ?"
+		if [ $? = 0 ]; then
+			git reset --hard HEAD
+			echo "Hard Reset effectué"
+			notification "Hard Reset effectué"
+		else
+			echo "Opération de Hard Reset annulée"
+			notification "Opération de Hard Reset annulée"
+			git_reset
+		fi
+	fi	
+}
+
+git_reset(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Reset  −" --width=250 --height=300 --text="" --column="" "			Reset			   *" "			Reset			  ⁂" "			Reset			   ∞" "" "	        Commit Reset		 ❌" "		       Remove			 ❌" "		   Hard Reset		 ❌"`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Aucun choix effectué"
+		fi
+	else
+		echo "Annulation"
+		function_files
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "			Reset			   *" ]; then
+			unset titre
+			git_reset_one
+		elif [ "$titre" = "			Reset			  ⁂" ]; then
+			unset titre
+			git_reset_some
+		elif [ "$titre" = "			Reset			   ∞" ]; then
+			unset titre
+			git_reset_all
+		elif [ "$titre" = "	        Commit Reset		 ❌" ]; then
+			unset titre
+			git_commit_reset
+		elif [ "$titre" = "		       Remove			 ❌" ]; then
+			unset titre
+			git_remove
+		elif [ "$titre" = "		   Hard Reset		 ❌" ]; then
+			unset titre
+			git_reset_hard
+		fi
+	else
+		echo "Aucun clone effectué"
+		function_files
+	fi
+	2>/dev/null
+}
+
+
+
+git_remove_simple(){
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+		git_remove
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à retirer du dépot"
+		notification "Aucun fichier à retirer du dépot"
+		git_remove
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Remove Simple ❌" --text="Git rm ..." --column="Fichiers changés et non-suivis" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier retiré du dépot"
+				git_remove
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git rm $titre && echo "fichier" $titre "retiré du dépot (cached)"
+			checkFilesChanged
+			notification "Fichier retiré du dépot (cached) :
+\t$titre"
+			unset titre
+			git_remove_simple
+		else
+			git_remove
+			echo "Pas de fichier retiré du dépot"
+		fi
+		2>/dev/null
+	fi
+}
+
+git_remove_simple_single(){
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+		git_remove
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à retirer du dépot"
+		notification "Aucun fichier à retirer du dépot"
+		git_remove
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Remove Simple ❌" --text="Git rm ..." --column="Fichiers changés et non-suivis" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier retiré du dépot"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git rm $titre && echo "fichier" $titre "retiré du dépot (cached)"
+			checkFilesChanged
+			notification "Fichier retiré du dépot (cached) :
+\t$titre"
+			unset titre
+		else
+			echo "Pas de fichier retiré du dépot"
+			git_remove
+		fi
+		2>/dev/null
+	fi
+}
+
+git_remove_cached(){
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+		git_remove
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à retirer du dépot"
+		notification "Aucun fichier à retirer du dépot"
+		git_remove
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Remove Cached ❌" --text="Git rm ..." --column="Fichiers changés et non-suivis" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier retiré du dépot"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git rm --cached $titre && echo "fichier" $titre "retiré du dépot (cached)"
+			checkFilesChanged
+			notification "Fichier retiré du dépot (cached) :
+\t$titre"
+			unset titre
+		else
+			git_remove
+			echo "Pas de fichier retiré du dépot"
+		fi
+		2>/dev/null
+	fi
+}
+
+git_remove_forced(){
+	filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+	checkFilesChanged
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit en cours"
+		notification "Commit en cours 🔏"
+		git_remove
+	elif [ "$filesChangedAndUntracked" = "" ]; then
+		echo "Aucun fichier à retirer du dépot"
+		notification "Aucun fichier à retirer du dépot"
+		git_remove 
+	else
+		if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Remove Forced ❌" --text="Git rm ..." --column="Fichiers changés et non-suivis" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked)`; then
+			titre=$file
+			if [ "$titre" = "" ]; then
+				echo "Pas de fichier retiré du dépot"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git rm -f $titre && echo "fichier" $titre "retiré du dépot (forced)"
+			checkFilesChanged
+			notification "Fichier retiré du dépot (forced) :
+\t$titre"
+			unset titre
+		else
+			echo "Pas de fichier retiré du dépot"
+			git_remove
+		fi
+		2>/dev/null
+	fi
+}
+
+git_remove(){
+	if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Type de Remove ❌" --height=250 --text="Git rm ..." --column="" "		Simple		 *" "		Simple		⁂" "" "		Cached" "		Forced"`; then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+		fi
+		else
+			echo "Annulation"
+			git_reset
+		fi
+		if ([ -n "$titre" ]); then
+			if [ "$titre" = "		Simple		 *" ]; then
+				unset titre
+				git_remove_simple_single
+			elif [ "$titre" = "		Simple		⁂" ]; then
+				unset titre
+				git_remove_simple
+			elif [ "$titre" = "		Cached" ]; then
+				unset titre
+				git_remove_cached
+			elif [ "$titre" = "		Forced" ]; then
+				unset titre
+				git_remove_forced
+			fi
+		else
+			echo "Pas de choix effectué"
+		fi
+		2>/dev/null
+}
+
+git_commit_reset(){
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		git reset HEAD^
+		rm ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending
+		rmdir ~/bin/easyGit/config/currentCommits/$HASH_COMMIT
+		echo "Commit annulé"
+		notification "Commit annulé"
+	else
+		zenity --question \
+			--title "Commit Reset  ❌" \
+			--width=470 \
+			--height=40 \
+			--text "Aucun Commit en cours, souhaitez-vous vraiment continuer ?"
+		if [ $? = 0 ]; then
+			git reset HEAD^
+			rm ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending
+			rmdir ~/bin/easyGit/config/currentCommits/$HASH_COMMIT
+			echo "Commit annulé"
+			notification "Commit annulé"
+		else
+			echo "Opération de Reset du Commit annulée"
+			notification "Opération de Reset du Commit annulée"
+			git_reset
+		fi
+	fi
+}
+
+git_commit(){
+	filesStaged=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesStaged`
+ 	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		echo "Commit déjà en cours"
+		notification "Commit déjà en cours 🔏"
+	else
+		if [ "$filesStaged" = "" ]; then
+			echo "Pas de fichier ajouté"
+			notification "Aucun fichier ajouté pour commit"
+		else
+ 			if ret=`zenity --entry --title="Commit  📝" --width=1000 --text='Texte du commit'`; then
+				titre=$ret
+				if [ "$titre" = "" ]; then
+					echo "Il faut un texte de commit"
+				fi
+			else
+				echo "Annulation"
+   			fi
+			if ([ -n "$titre" ]); then
+				git commit -m "$titre" &> ~/bin/easyGit/gitTemp
+				TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+				lineNumber=$(($totalLineNumber - 3))
+				TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+				echo "Commit effectué :" $titre
+				TEXT_COMMIT=$titre
+				HASH_COMMIT=`git rev-parse HEAD`
+				mkdir ~/bin/easyGit/config/currentCommits/$HASH_COMMIT
+				touch ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending
+				unset titre
+			else
+				echo "Pas de commit effectué"
+			fi
+		fi
+	fi
+}
+
+git_push(){
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Push  📤" --text="Git push origin ..." --column="Branche actuelle" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch)`; then
+			titre=$ret
+			if [ "$titre" = "" ]; then
+				echo "La destination est nécessaire"
+			fi
+		else
+			echo "Annulation"
+		fi
+		if ([ -n "$titre" ]); then
+			git push origin $titre &> ~/bin/easyGit/gitTemp
+			TMP_SCREEN=$(<~/bin/easyGit/gitTemp)
+			lineNumber=$(($totalLineNumber - 3))
+			TMP_SCREEN=`echo "$TMP_SCREEN" | fold -b$(($lineNumber)) -s | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+			echo "Push sur la branche" $titre "effectué"
+			notification "Push sur la branche :
+\t$titre"
+			unset titre
+			rm ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending
+			rmdir ~/bin/easyGit/config/currentCommits/$HASH_COMMIT
+			if [ "$?" = -1 ]; then
+				zenity --error \
+				--text="Mise à jour annulée."
+			fi
+		else
+			echo "Pas de Push effectué"
+		fi
+		2>/dev/null
+	else
+		echo "Aucun commit : push impossible"
+		notification "Aucun commit : push impossible"
+	fi
+}
+
+git_merge(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Merge  📥" --text="Git pull --merge origin ..." --column="Nom de branche" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/branchesList)`; then
+		titre=$ret
+		if [ "$titre" = "" ]; then
+			echo "Il faut un dépot distant"
+		fi
+	else
+		echo "Annulation"
+   	fi
+	if ([ -n "$titre" ]); then
+		git merge origin $titre &> ~/bin/easyGit/gitTemp
+		FILE=`dirname $0`/gitTemp
+		zenity --text-info \
+			--title="Merge" \
+			--width=450 \
+			--height=300 \
+			--filename=$FILE
+		case $? in
+			0)
+				echo "Git Pull en statégie Merge de la branche $titre"
+				notification "Git Pull en statégie Merge de la branche $titre"
+				unset titre
+				;;
+			1)
+				echo "Git Merge quitté" ;;
+			-1)
+				echo "Une erreur est survenue." ;;
+		esac
+	else
+		echo "Pas de Pull Merge effectué"
+	fi
+	2>/dev/null
+}
+
+git_rebase(){
+	if ret=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Rebase  📥"--text="Git pull --rebase origin ..." --column="Nom de branche" $(sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/branchesList)`; then
+		titre=$ret
+			if [ "$titre" = "" ]; then
+				echo "Il faut un dépot distant"
+			fi
+	else
+		echo "Annulation"
+   	fi
+	if ([ -n "$titre" ]); then
+		git pull --rebase origin $titre &> ~/bin/easyGit/gitTemp
+		FILE=`dirname $0`/gitTemp
+		zenity --text-info \
+			--title="Rebase" \
+			--width=450 \
+			--height=300 \
+			--filename=$FILE
+		case $? in
+			0)
+				echo "Git Pull en statégie Rebase de la branche $titre"
+				notification "Git Pull en statégie Merge de la branche $titre"
+				unset titre
+				;;
+			1)
+				echo "Git Rebase quitté" ;;
+			-1)
+				echo "Une erreur est survenue." ;;
+		esac
+	else
+		echo "Pas de Pull Rebase effectué"
+	fi
+	2>/dev/null
+}
+
+git_pull(){
+if file=`zenity --list --ok-label="✅" --cancel-label="❎" --title="Pull 📥" --width=250 --height=205 --text="" --column="" "		         Rebase		          📥" "" "		       	 Merge		          📥"`; then
+		titre=$file
+		if [ "$titre" = "" ]; then
+			echo "Pas de choix effectué"
+		fi
+	else
+		function_repo
+		echo "Annulation"
+	fi
+	if ([ -n "$titre" ]); then
+		if [ "$titre" = "		         Rebase		          📥" ]; then
+			git_rebase
+		elif [ "$titre" = "		       	 Merge		          📥" ]; then
+			git_merge
+		fi
+	else
+		echo "Pas de choix effectué"
+	fi
+	2>/dev/null
+}
+
+############### FILES DIALOG ####################
+
+frm_files(){
+checkFilesChanged
+currentBranch=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/config/currentBranch`
+filesChanged=`sed ':z;N;$! bz;s/\n/ /g;s/ /,  /g' ~/bin/easyGit/files/filesChanged | fold -b$(($totalLineNumber + $fifteen)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+filesUntracked=`sed ':z;N;$! bz;s/\n/ /g;s/ /,  /g' ~/bin/easyGit/files/filesUntracked | fold -b$(($totalLineNumber + $fifteen)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+filesStaged=`sed ':z;N;$! bz;s/\n/ /g;s/ /,  /g' ~/bin/easyGit/files/filesStaged | fold -b$(($totalLineNumber + $fifteen)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+filesCommitted=`sed ':z;N;$! bz;s/\n/ /g;s/ /,  /g' ~/bin/easyGit/files/filesCommitted | fold -b$(($totalLineNumber + $fifteen)) -s  | ( TAB=$'\t' ; sed "s/^/$TAB/" )`
+filesChangedAndUntracked=`sed ':z;N;$! bz;s/\n/ /g' ~/bin/easyGit/files/filesChangedAndUntracked`
+
+BRANCH_DISPLAY="\t<big>⎇</big>\t<span color=\"grey\">Branche :</span><span color=\"orange\"><b><i> [$currentBranch]</i></b></span>"
+COMMIT_PENDING_SIGN_DISPLAY="<span color=\"grey\">Commit </span><span color=\"red\"><i>en cours</i></span>"
+COMMIT_PENDING_LABEL_DISPLAY="\t<span color=\"gray\"><big>📝</big>\tContenu</span>"
+COMMIT_LABEL_DISPLAY="\t<span color=\"gray\"><big>📝</big>\tDernier commit du <i>$LAST_COMMIT_DATE</i></span>"
+COMMITTED_LABEL_DISPLAY="\t<span color=\"gray\"><big>🗒</big>\tCommités</span>"
+CHANGED_LABEL_DISPLAY="\t<span color=\"gray\"><big>🔧</big>\tModifiés</span>"
+UNTRACKED_LABEL_DISPLAY="\t<span color=\"gray\"><big>🧩</big>\tNon suivis</span>"
+STAGED_LABEL_DISPLAY="\t<span color=\"gray\"><big>➕</big>\tAjoutés</span>"
+
+if [ "$filesDisplay" -eq 1 ]; then
+	############################## -- Commit Pending -- ##############################
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		#=============== no modified and no untracked ===============
+		if [ "$filesChangedAndUntracked" = "" ]; then
+            HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+$SPACE_LINE$SIMPLE_LINE
+
+$SPACE_COMMIT_PENDING$COMMIT_PENDING_SIGN_DISPLAY
+$COMMIT_PENDING_LABEL_DISPLAY
+<span><b>$TEXT_COMMIT</b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+
+"
+		#=============== some modified and no untracked ===============
+		elif [[ "$filesUntracked" == "" ]] && [[ "$filesChanged" != "" ]] ; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+$SPACE_LINE$SIMPLE_LINE
+
+$SPACE_COMMIT_PENDING$COMMIT_PENDING_SIGN_DISPLAY
+
+$COMMIT_PENDING_LABEL_DISPLAY
+
+<span><b>$TEXT_COMMIT</b></span>
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+
+"
+		#=============== no modified but some untracked ===============
+		elif [[ "$filesChanged" == "" ]] && [[ "$filesUntracked" != "" ]]; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+$SPACE_LINE$SIMPLE_LINE
+
+$SPACE_COMMIT_PENDING$COMMIT_PENDING_SIGN_DISPLAY
+$COMMIT_PENDING_LABEL_DISPLAY
+<span><b>$TEXT_COMMIT</b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+
+"
+		#=============== by default ===============
+		else
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+$SPACE_LINE$SIMPLE_LINE
+
+$SPACE_COMMIT_PENDING$COMMIT_PENDING_SIGN_DISPLAY
+$COMMIT_PENDING_LABEL_DISPLAY
+<span><b>$TEXT_COMMIT</b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+
+"
+		fi
+
+	############################## -- By Default -- ##############################
+
+	elif [ "$filesStaged" = "" ]; then
+		#=============== no modified and no untracked ===============
+		if [ "$filesChangedAndUntracked" = "" ]; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+
+"
+		#=============== some modified and no untracked ===============
+		elif [[ "$filesUntracked" == "" ]] && [[ "$filesChanged" != "" ]] ; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+
+"
+		#=============== no modified but some untracked ===============
+		elif [[ "$filesChanged" == "" ]] && [[ "$filesUntracked" != "" ]]; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+
+"
+		#=============== by default ===============
+		else
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+
+"
+		fi
+	############################## -- Files Added -- ##############################
+	else
+		#=============== no modified and no untracked ===============
+		if [ "$filesChangedAndUntracked" = "" ]; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+
+$STAGED_LABEL_DISPLAY
+<span color=\"orange\"><b>$filesStaged</b></span>
+
+"
+		#=============== some modified and no untracked ===============
+		elif [[ "$filesUntracked" == "" ]] && [[ "$filesChanged" != "" ]] ; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+
+
+$STAGED_LABEL_DISPLAY
+<span color=\"orange\"><b>$filesStaged</b></span>
+
+"
+		#=============== no modified and some untracked ===============
+		elif [[ "$filesChanged" == "" ]] && [[ "$filesUntracked" != "" ]]; then
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+
+
+$STAGED_LABEL_DISPLAY
+<span color=\"orange\"><b>$filesStaged</b></span>
+
+"
+		#=============== by default ===============
+		else
+			HEADER_FILES="
+$GIT
+$BRANCH_DISPLAY
+
+$COMMIT_LABEL_DISPLAY
+<span><b><i>$TEXT_COMMIT</i></b></span>
+
+$COMMITTED_LABEL_DISPLAY
+<i>$filesCommitted</i>
+$SPACE_LINE$SIMPLE_LINE
+
+$CHANGED_LABEL_DISPLAY
+<span color=\"green\">$filesChanged</span>
+
+$UNTRACKED_LABEL_DISPLAY
+<span color=\"#155162\">$filesUntracked</span>
+
+
+$STAGED_LABEL_DISPLAY
+<span color=\"orange\"><b>$filesStaged</b></span>
+
+"
+		fi
+	fi
+else
+	HEADER_FILES="
+$GIT
+$TMP_SCREEN
+"
+fi
+
+# vertical responsiveness example
+nbLines=`echo -n "$HEADER_FILES" | grep -c '^'`
+oneLineHeight=17
+linesHeight=$(($oneLineHeight * $nbLines))
+2>/dev/null # bug zenity
+
+if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+	if [ $filesDisplay -eq 1 ]; then
+		bLines=`echo -n "$HEADER_FILES" | grep -c '^'`
+		oneLineHeight=17
+		linesHeight=$(($oneLineHeight * $nbLines))
+		commandsHeight=250
+		dialogFilesHeight=$(($commandsHeight + $linesHeight))
+		zenity --list --width=$filesDialogWidth --height=$dialogFilesHeight --text='<span font-family=\"Arial\">'"$HEADER_FILES"'</span>' \
+			--title="Fichiers 📑" \
+			--ok-label="✅" \
+			--cancel-label="❎" \
+			--hide-column 1 --column "" --column "" --column "" --column ""  --column "" \
+			1 "    1" "$SPACE_PUSH$GP" "$SPACE_COMMIT_PENDING_SYMBOL" "📤" \
+			0 "" "" "" ""\
+			2 "    2" "$SPACE_COMMIT_RESET$GCR" "$SPACE_COMMIT_PENDING_SYMBOL" "❌" \
+			3 "    3" "$SPACE_DISPLAY$AFF" "$SPACE_COMMIT_PENDING_SYMBOL" "💻" 2>/dev/null;
+	else
+		bLines=`echo -n "$HEADER_FILES" | grep -c '^'`
+		oneLineHeight=17
+		linesHeight=$(($oneLineHeight * $nbLines))
+		commandsHeight=235
+		dialogFilesHeight=$(($commandsHeight + $linesHeight))
+		zenity --list --width=$filesDialogWidth --height=$dialogFilesHeight --text='<span font-family=\"Arial\">'"$HEADER_FILES"'</span>' \
+			--title="Fichiers 📑" \
+			--ok-label="✅" \
+			--cancel-label="❎" \
+			--hide-column 1 --column "" --column "" --column "" --column ""  --column "" \
+			1 "    1" "$SPACE_PUSH$GP" "$SPACE_COMMIT_PENDING_SYMBOL" "📤" \
+			0 "" "" "" ""\
+			2 "    2" "$SPACE_COMMIT_RESET$GCR" "$SPACE_COMMIT_PENDING_SYMBOL" "❌" \
+			3 "    3" "$SPACE_DISPLAY$AFF" "$SPACE_COMMIT_PENDING_SYMBOL" "📟" 2>/dev/null;
+	fi
+else
+	if [ $filesDisplay -eq 1 ]; then
+		nbLines=`echo -n "$HEADER_FILES" | grep -c '^'`
+		oneLineHeight=17
+		linesHeight=$(($oneLineHeight * $nbLines))
+		commandsHeight=325
+		dialogFilesHeight=$(($commandsHeight + $linesHeight))
+		zenity --list --width=$filesDialogWidth --height=$dialogFilesHeight --text='<span font-family=\"Arial\">'"$HEADER_FILES"'</span>' \
+			--title="Fichiers 📑" \
+			--ok-label="✅" \
+			--cancel-label="❎" \
+			--hide-column 1 --column "" --column "" --column "" --column ""  --column "" \
+			1 "    1" "$SPACE_ADD$GA" "$SPACE_FILES_SYMBOL" "➕" \
+			2 "    2" "$SPACE_COMMIT$GC" "$SPACE_FILES_SYMBOL" "📝" \
+			0 "" "" "" ""\
+			3 "    3" "$SPACE_RESET$GRT" "$SPACE_FILES_SYMBOL" "➖"\
+			4 "    4" "$SPACE_OPEN_FILE$OF" "$SPACE_FILES_SYMBOL" "📖" \
+			5 "    5" "$SPACE_DISPLAY$AFF" "$SPACE_FILES_SYMBOL" "💻" \
+			6 "    6" "$SPACE_CHANGE_WIDTH$CW" "$SPACE_FILES_SYMBOL" "📏" 2>/dev/null;
+	else
+		nbLines=`echo -n "$HEADER_FILES" | grep -c '^'`
+		oneLineHeight=17
+		linesHeight=$(($oneLineHeight * $nbLines))
+		commandsHeight=315
+		dialogFilesHeight=$(($commandsHeight + $linesHeight))
+		zenity --list --width=$filesDialogWidth --height=$dialogFilesHeight --text='<span font-family=\"Arial\">'"$HEADER_FILES"'</span>' \
+			--title="Fichiers 📑" \
+			--ok-label="✅" \
+			--cancel-label="❎" \
+			--hide-column 1 --column "" --column "" --column "" --column ""  --column "" \
+			1 "    1" "$SPACE_ADD$GA" "$SPACE_FILES_SYMBOL" "➕" \
+			2 "    2" "$SPACE_COMMIT$GC" "$SPACE_FILES_SYMBOL" "📝" \
+			0 "" "" "" ""\
+			3 "    3" "$SPACE_RESET$GRT" "$SPACE_FILES_SYMBOL" "➖" \
+			4 "    4" "$SPACE_OPEN_FILE$OF" "$SPACE_FILES_SYMBOL" "📖" \
+			5 "    5" "$SPACE_DISPLAY$AFF" "$SPACE_FILES_SYMBOL" "💻" \
+			6 "    6" "$SPACE_CHANGE_WIDTH$CW" "$SPACE_FILES_SYMBOL" "📏" 2>/dev/null;
+	fi
+fi
+}
+
+frm_files_parser(){
+	if [ -e ~/bin/easyGit/config/currentCommits/$HASH_COMMIT/isCommitPending ]; then
+		case $1 in
+			1) git_push ;;
+			2) git_commit_reset ;;
+			3) switch_display ;;
+			*) function_git ;;
+		esac
+	else
+		case $1 in
+			1) git_add ;;
+			2) git_commit ;;
+			3) git_reset ;;
+			4) edit_file ;;
+			5) switch_display ;;
+			6) change_width ;;
+			*) function_git ;;
+		esac
+	fi
+}
+
+function_files(){
+	menuchoice=$(frm_files)
+	frm_files_parser ${menuchoice%|*}
+	if [ $quit!="1" ]; then
+		function_files
+	fi
+}
+
+############### REPOS DIALOG ####################
+
+frm_repo(){
+header_repo
+nbLines=`echo -n "$HEADER" | grep -c '^'`
+commandsHeight=295
+oneLineHeight=17
+linesHeight=$(($oneLineHeight * $nbLines))
+dialogRepoHeight=$(($commandsHeight + $linesHeight))
+zenity --list --width=400 --height=$dialogRepoHeight --text='<span font-family=\"Arial\">'"$HEADER"'</span>' \
+    --title="Dépot 🗃" \
+    --ok-label="✅" \
+    --cancel-label="❎" \
+    --hide-column 1 --column "" --column "" --column "" --column "" --column "" \
+    1 "    1" "				         $GF" "			           " "📩" \
+    2 "    2" "				         $GS" "			            " "🔁" \
+    3 "    3" "				           $GPL" "			           " "📥" \
+    0 "" "" "" "" \
+    4 "    4" "				        $OR" "			           " "📂" \
+    5 "    5" "				         $GCL" "			            " "📚" 2>/dev/null ;
+}
+
+frm_repo_parser(){
+    case $1 in
+        1) git_fetch ;;
+        2) git_stash ;;
+        3) git_pull ;;
+        4) open_repo ;;
+        5) git_clone ;;
+        *) TMP_SCREEN=""
+			function_git ;;
+	esac
+}
+
+function_repo(){
+	menuchoice=$(frm_repo)
+	frm_repo_parser ${menuchoice%|*}
+	if [ $quit!="1" ]; then
+		function_repo
+	fi
+}
+
+############### UTILS DIALOG ####################
+
+frm_utils(){
+header_utils
+zenity --list --width=400 --height=555 --text='<span font-family=\"Arial\">'"$HEADER"'</span>' \
+    --title="Outils 🧰" \
+    --ok-label="✅" \
+    --cancel-label="❎" \
+    --hide-column 1 --column "" --column "" --column "" --column "" --column "" \
+    1 "    1" "				           $GL" "			      " "📓" \
+    2 "    2" "				     $GK" "			" "⎇" \
+    3 "    3" "			                 $GST" "			      " "🔎" \
+    0 "" "" "" "" \
+    4 "    4" "			              $TC" "			      " "💻" \
+    5 "    5" "				   $CP" "		   " "🍒" \
+    6 "    6" "				       $FX" "		   " "⛑" \
+	2>/dev/null ;
+}
+
+frm_utils_parser(){
+    case $1 in
+        1) git_log ;;
+        2) git_checkout ;;
+        3) git_status ;;
+        4) terminal ;;
+		5) git_cherry_pick ;;
+		6) fix_process_already_launched;;
+        *) function_git ;;
+        esac
+}
+
+function_utils(){
+	menuchoice=$(frm_utils)
+	frm_utils_parser ${menuchoice%|*}
+	if [ $quit!="1" ]; then
+		function_utils
+	fi
+}
+
+############### GENERAL DIALOG ####################
+
+frm_git(){
+	TMP_SCREEN=""
+	header_general
+	zenity --list --width=400 --height=505 --text='<span font-family=\"Arial\">'"$HEADER"'</span>' \
+    	--title="Git" \
+    	--ok-label="✅" \
+    	--cancel-label="❎" \
+    	--hide-column 1 --column "" --column "" --column "" --column "" --column "" \
+    	1 "  1" "				        $MD" "			           " "🗃" \
+    	2 "  2" "				      $MF" "			           " "📑" \
+    	3 "  3" "				        $MO" "			           " "🧰" \
+    	0 "" "" "" "" \
+    	4 "  4" "				         $SC" "			           " "🗑" 2>/dev/null;
+}
+
+frm_git_parser(){
+    case $1 in
+        1) function_repo ;;
+        2) function_files ;;
+		3) function_utils ;;
+		4) clear_screen ;;
+        *)
+           quit="1"
+           _quit ;;
+    esac
+}
+
+function_git(){
+	checkFilesChanged
+	menuchoice=$(frm_git)
+	frm_git_parser ${menuchoice%|*}
+	if [ $quit!="1" ]; then
+        function_git
+    fi
+}
+
+function_git
+exit 0

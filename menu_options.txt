@@ -1,0 +1,3 @@
+"Creation du jeu de donnees" "37" "4" "10%" "2/19" "Isolation d'un contxte  ${isolation_values}"
+"Import specifique de bibles" "77" "31" "7%" "2/28" "Replace String  ${import_bible_content}  evt  ${evenement_id}"
+"Export des bibles" "154" "4" "60%" "3/5" "Element Should Contain  css=.tab-tab  test1 Ceci est le test 1 {{${evenement_id},1,Non,Oui,${demande_type_id},${collectivite_id}}}"

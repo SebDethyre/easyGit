@@ -1,0 +1,61 @@
+baab22d2d66c1a8fc74678cc6f3e9ceea8e8e81b			fix: les méthodes de hook renvoient un booléen + corrections diverses
+bfd06f6a5a10f8b35e4b02233cf51f87625d4f9d			doc(changelog): 1.3.2
+d9dd15390bafe89d4331dd42657a14338d3aace6			fix(instruction_finalize_pre): return boolean
+cafdb397be2ad0f9f70b0062f9571a373e5adb14			Merge branch 'test-quote-in-param' into 'main'
+84af7c478f7cdf0eb532e7d248d74854ac79afe9			test: fix Page should have contained text 'SRA_ARA_P_2024_00002' but did not
+0d9445e0b60cbe5c617a7d49428df52fd90d1475			feat: ne prend test de la prise en compte des apostrophes dans la description des données supplémentaires (extra_data) + fix idempotence années
+0dece5c172c18c03b02b7cf2169e4557bbf3b049			tests : update tests values after corrections
+0793b9983ef5348b1e82200f67d0df621d5ab6f6			doc(changelog): 1.3.1
+654da4d64fc082738f2aca6aaa4c63408e97e74a			doc: fix mentions of 'modele_nom_champ' and many other fixes
+a1843d869ad00c6ea42e7a5bac13a9d0ca39eaf8			doc(changelog): 1.3.0
+864037d28f0d16ec6a0b259f61ce62bee0e562a8			fix(default): field label should default to field name (not 'extra_data')
+edcfd0947f6a0d535448bac4db7a49f47aef3135			fix(default): alias field name should default to field name (not 'extra_data')
+dd635c170447027db18ebd8acc3147358d9331bd			feat: model field name should only use letters/numbers (no [AAAA]) and '[abrege_service]' should be optional in model value)
+afecc478009e5af42f4cc487dac0adf0d5b6ed5a			fix: using empty value of the sequence to create a bad data value
+abdc6fc17164653af50a892b1ca9bc237b9a87c0			fix: once the data value is stored empty (because of a bug), it cannot be changed
+2a8d5ecdbc3828780102c2975c7a5a1748830d9f			refactor(errors): do not throw exception, and better user and logging messages
+b2190c223e7b07170c5db24f40bae2d7f1927ec6			refactor(cleanup): disabled/commented code removed
+89d69197f40690deb370ed4e5f62a74e23dd39e5			doc(changelog): 1.2.2
+1045a33d477c918b23a1a07b60a6a48c1caaaf1e			doc(changelog): unreleased
+c525925b1d833d780e55dfc3495ac55233a6ee41			refactor : fiabiliation et optimisation en utilisant les keywords d'ajout et de suppression des modules
+a4be8f3fa9ca51cbe90233ecfcbb03e7041ab235			doc: update step 3
+7a8c7c555890ddb76362add6a776809c00397b21			doc: update step 2
+2cd12cec353e59491692767065cda8684b191520			doc: update step 1
+57a07901c94b844d025f68c80ed7adbcffa24c30			doc : fix missing class class="module-section"
+eb73190a2a53a74f6627dcf48521dd33e1155525			doc(changelog): 1.2.1
+e41ecf540993c6c9050fc7274160323db8b8ecf9			fix: correction de messages d'erreur
+906f63b4c94b7644b1f666a851867b009c77d257			fix: add gettext and sprintf for msg
+2b490a106ee181f889b36a44ee9a5dcf8ace8745			fix: suppression de log inutile
+a1a25cdb8bfdcf5097c8d97918ac3fc90e34ef20			fix: incrémentation du compteur fortuite lors de la finalisation
+5d1aaddd2c2edf171d2c6ab551be7e7fce9143ad			doc(changelog): 1.2.0
+5fad9d02dc5b33c468ec1c4266505de44b3460de			chore : Add unistall function - Closes Issue : #2
+9cb245689c930f041a29e6e9c6448dec0a12dc59			fix : delete comments after Todo resolution
+02b356281c603ab2a60761d0523093e82ecd2da9			Merge branch '2-les-sequences-creees-par-le-module-devraient-etre-supprimees-a-la-desinstallation-de-celui-ci' into 'main'
+7616f20f58f882b865839e70d1cb1751a05ec39b			chore : Move sequence storage from public schema to openads schema
+a515bea14385077887d14b852ba1083fae952e37			fix : module.annexes has changed the expected parameter format
+8737f98d5f153370dcccff264e83a66d08a96378			tests(fix) : Minor corrections for tests to pass and add test case For Hook Context
+75dc7cdbb3a03903d9cb840d7b6b6932153548dd			tests(fix) : Minor corrections for tests to pass
+741dd25b6870bb82495b1de7fd8327d801ae717a			doc(changelog): 1.1.0
+262fd273cdfcf554f0ce73a0f3de492beee2a0a9			doc(fix): Amélioration syntaxe HTML
+df33c754afe78b2eda4ba099cfdbedc332d82611			Ajouter CHANGELOG
+7aceb3a95edd8556aa260b9458edd33fb0b55ef4			refactor: suppression de méthode inutile
+41c0ca9f1c9e78d24195f2c723acd034813cedf5			fix: path require_once module.class.php
+9ee085feba0640a50d7aa5a5590044cf9c3cf778			feat: test du compteur annuel
+ed3e33c463d39108ffdda048d842ff347acf77c9			fix: vérification d'un numéro d'arrêté avant de proposer le champ de fusion
+679883285a2d67ca52ff9b38e663c70a14bc5ee3			fix: correction de get_supported_hooks
+14664a546036e895d0896f50ad3c9cecf6cb32ff			doc: ajout du fichier de documentation
+ee96b575ce3414aa3efa710886b1af09d77b2d87			fix: chemin du require_once
+ff53cc53869d095cd7146ef6641d9324539d0680			feat: ajout de la méthode de renvoi des déclencheurs (false)
+f63f3b4b840ae0c5910bf555164959bb4c695442			feat(extra_data): use application « extra data store » (all form features are removed/commented)
+d465b8f40abc539ec025cadd4d1cf30bb0e130fb			refactor: renommage de fonction + suppression de fonction inutile
+b333157254fba97ccaa48b28207e82b71af07dfb			fix: suppression de bootstrap.py
+278e3b2d526c857782c5c302fcaa5d17ce8d0ebd			fix: modifiaction de l'url de bootstrap.py
+07257f128c56063348e38da3cb5ca74c703b7c7a			fix: ajout d'une exception dans le script bootstrap
+29f60a7f89f972fba378a06e41dbe3b84954a21d			fix: ajout d'une exception dans le script bootstrap
+225978a0c96ef50bdb9ebea5570517075b84cf92			fix: chemin du dépot svn
+e17a27890b8f64381e631d460464ea25c64307a6			fix: chemin du dépot svn
+fbde2f31a6833ef2eb74e16fb5d2425e0cce4c71			feat: ajout d'un fichier pour le test sur Jenkins
+6443346e99f3cc8e6fd8ac37577ab451da631d9a			doc: rédaction de README.md
+bc75e06c38d29445c0e334b9f61b301c7df89ee3			feat: ajout de vérification de la présence du paramètre modele_value + commentaires
+93e89f2705920bc8409644f5154a2af020722583			feat: champ dynamique de compteur annuel + champ de fusion
+037be5902a61d3be866fa0044e3cda20f1f33fc9			Initial commit
